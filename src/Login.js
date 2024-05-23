@@ -66,7 +66,7 @@ const Login = ({ onLoginSuccess }) => {
           <h2>Enter OTP</h2>
           {error && <p style={{ color: 'red' }}>{error}</p>}
           <div>
-            <label>OTP</label>
+            <label>OsTP</label>
             <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)} />
           </div>
           <button type="submit">Verify OTP</button>
