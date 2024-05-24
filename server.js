@@ -65,6 +65,27 @@ app.post('/api/register', (req, res) => {
   }
 });
 
+// New endpoint for adding pets
+app.post('/api/users/:userId/pets', (req, res) => {
+  const { userId } = req.params;
+  const petInfo = req.body;
+  const users = getUsers();
+  const user = users.find(u => u.id === parseInt(userId));
+
+  if (!user) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  const existingPet = user.pets.find(pet => pet.name === petInfo.name && pet.species === petInfo.species);
+  if (existingPet) {
+    return res.status(400).json({ message: 'Pet already exists' });
+  }
+
+  user.pets.push(petInfo);
+  saveUsers(users);
+  res.status(201).json({ message: 'Pet added successfully', pet: petInfo });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

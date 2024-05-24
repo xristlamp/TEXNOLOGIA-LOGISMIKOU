@@ -1,1 +1,18 @@
-[]
+[
+  {
+    "id": 1,
+    "username": "z",
+    "email": "z@z",
+    "password": "z",
+    "role": "user",
+    "pets": []
+  },
+  {
+    "id": 2,
+    "username": "d",
+    "email": "d@d",
+    "password": "d",
+    "role": "user",
+    "pets": []
+  }
+]
