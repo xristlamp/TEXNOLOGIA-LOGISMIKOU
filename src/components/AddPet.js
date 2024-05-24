@@ -40,11 +40,11 @@ function AddPetForm({ userId }) {
       </div>
       <div>
         <label>Age:</label>
-        <input type="text" value={age} onChange={(e) => setAge(e.target.value)} />
+        <input type="number" name="age" value={petInfo.age} onChange={handleChange} required />
       </div>
       <div>
         <label>Medical History:</label>
-        <textarea value={medicalHistory} onChange={(e) => setMedicalHistory(e.target.value)}></textarea>
+        <textarea name="medicalHistory" value={petInfo.medicalHistory} onChange={handleChange} required />
       </div>
       <button type="submit">Add Pet</button>
     </form>
