@@ -5,7 +5,8 @@
     "email": "z@z",
     "password": "z",
     "role": "user",
-    "pets": []
+    "pets": [],
+    "otp": "157500"
   },
   {
     "id": 2,
@@ -14,5 +15,12 @@
     "password": "d",
     "role": "user",
     "pets": []
+  },
+  {
+    "id": 3,
+    "username": "q",
+    "email": "q@q",
+    "password": "q",
+    "role": "user"
   }
 ]
