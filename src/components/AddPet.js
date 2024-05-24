@@ -43,7 +43,7 @@ const AddPet = ({ userId }) => {
         <input type="text" name="breed" value={petInfo.breed} onChange={handleChange} required />
       </div>
       <div>
-        <label>Age:</label>
+        <label>Agee:</label>
         <input type="number" name="age" value={petInfo.age} onChange={handleChange} required />
       </div>
       <div>
