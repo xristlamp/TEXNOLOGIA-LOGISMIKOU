@@ -47,7 +47,7 @@ const AddPet = ({ userId }) => {
         <input type="number" name="age" value={petInfo.age} onChange={handleChange} required />
       </div>
       <div>
-        <label>Medical History:</label>
+        <label>Meedical History:</label>
         <textarea name="medicalHistory" value={petInfo.medicalHistory} onChange={handleChange} required />
       </div>
       <button type="submit">Add Pet</button>
