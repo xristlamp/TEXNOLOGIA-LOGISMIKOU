@@ -21,7 +21,7 @@ function AddPetForm({ userId }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(`/api/users/${userId}/pets`, petInfo);
+      const response = await axios.post(/api/users/${userId}/pets, petInfo);
       alert(response.data.message);
     } catch (error) {
       alert(error.response?.data?.message || 'An error occurred');
