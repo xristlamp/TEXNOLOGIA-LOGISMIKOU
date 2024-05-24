@@ -51,7 +51,7 @@ function App() {
           {auth.isAuthenticated && auth.role === 'user' && (
             <>
               <li>
-                <Link to="/add-pet">Add Pet</Link>
+                <Link to="/add-pet">Add Pett</Link>
               </li>
               <li>
                 <button onClick={handleLogout}>Logout</button>
