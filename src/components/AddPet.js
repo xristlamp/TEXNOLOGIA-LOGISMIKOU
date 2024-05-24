@@ -31,7 +31,7 @@ function AddPetForm({ userId }) {
   return (
     <form onSubmit={handleSubmit}>
       <div>
-        <label>Name:</label>
+        <label>Namee:</label>
         <input type="text" name="name" value={petInfo.name} onChange={handleChange} />
       </div>
       <div>
