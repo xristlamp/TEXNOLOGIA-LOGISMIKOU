@@ -5,7 +5,7 @@ import AddPet from './AddPet';
 const UserProfile = ({ user }) => {
   return (
     <div>
-      <h1>{user.username}'s Profile</h1>
+      <h1>{user.username}'s Profiile</h1>
       <h2>Pets</h2>
       <ul>
         {user.pets.map((pet, index) => (
