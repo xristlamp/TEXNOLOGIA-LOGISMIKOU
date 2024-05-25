@@ -114,12 +114,13 @@ class Application(tk.Tk):
         self.pet_name_entry = tk.Entry(self)
         self.pet_name_entry.pack()
         tk.Button(self, text="Add Pet", command=self.add_pet).pack(pady=5)
+        tk.Button(self, text="Back", command=self.show_login_register_window).pack(pady=10)
         # List of pets
         self.pet_listbox = tk.Listbox(self)
         self.pet_listbox.pack(pady=10)
         self.populate_pet_list()  # Populate list with user's pets
 
-        tk.Button(self, text="Back", command=self.show_login_register_window).pack(pady=10)
+        
 
     def add_pet(self):
         pet_name = self.pet_name_entry.get()
