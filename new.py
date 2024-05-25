@@ -72,7 +72,15 @@ class Application(tk.Tk):
         self.cursor.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
         user = self.cursor.fetchone()
         if user:
-            self.show_user_type_selection(user[3])  # Pass user type to the next window
+            user_type = user[3]
+            if user_type == "Ordinary User":
+                self.show_ordinary_user_profile()
+            elif user_type == "Veterinarian":
+                self.show_veterinarian_profile()
+            elif user_type == "Pet Sitter":
+                self.show_pet_sitter_profile()
+            elif user_type == "Trainer":
+                self.show_trainer_profile()
         else:
             messagebox.showerror("Login Error", "Invalid username or password.")
 
