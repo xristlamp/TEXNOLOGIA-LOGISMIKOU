@@ -51,7 +51,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/" element={<h1>Welcome to the App</h1>} />
+        <Route path="/" element={<h1>Welcom to the App</h1>} />
         <Route path="/user-home" element={auth.isAuthenticated && auth.role === 'user' ? <UserHome /> : <Login onLoginSuccess={handleLoginSuccess} />} />
         <Route path="/vet-home" element={auth.isAuthenticated && auth.role === 'vet' ? <VetHome /> : <Login onLoginSuccess={handleLoginSuccess} />} />
         <Route path="/groomer-home" element={auth.isAuthenticated && auth.role === 'groomer' ? <GroomerHome /> : <Login onLoginSuccess={handleLoginSuccess} />} />
