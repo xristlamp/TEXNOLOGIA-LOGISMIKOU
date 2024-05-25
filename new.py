@@ -21,6 +21,14 @@ class Application(tk.Tk):
                 user_type TEXT NOT NULL
             )
         """)
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS pets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                pet_name TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
         self.conn.commit()
 
     def show_login_register_window(self):
@@ -72,6 +80,7 @@ class Application(tk.Tk):
         self.cursor.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
         user = self.cursor.fetchone()
         if user:
+            self.logged_in_user_id = user[0]  # Store the user's ID
             user_type = user[3]
             if user_type == "Ordinary User":
                 self.show_ordinary_user_profile()
