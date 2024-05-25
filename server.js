@@ -65,6 +65,33 @@ app.post('/api/register', (req, res) => {
   }
 });
 
+app.post('/api/users/:userId/pets', (req, res) => {
+  const { userId } = req.params;
+  const petInfo = req.body;
+  console.log('UserID:', userId);
+  console.log('Pet Info:', petInfo);
+
+  const users = getUsers();
+  console.log('Users:', users);
+  const user = users.find(u => u.id === parseInt(userId));
+
+  if (!user) {
+    console.log('User not found');
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  const existingPet = user.pets.find(pet => pet.name === petInfo.name && pet.species === petInfo.species);
+  if (existingPet) {
+    console.log('Pet already exists');
+    return res.status(400).json({ message: 'Pet already exists' });
+  }
+
+  user.pets.push(petInfo);
+  saveUsers(users);
+  res.status(201).json({ message: 'Pet added successfully', pet: petInfo });
+});
+
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

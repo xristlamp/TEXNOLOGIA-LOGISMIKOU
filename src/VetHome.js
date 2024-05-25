@@ -7,7 +7,7 @@ const VetHome = () => {
       <h2>Vet Home</h2>
       <button><Link to="/profile">My Profile</Link></button>
       <button><Link to="/reservations">My Reservations</Link></button>
-      <button><Link to="/upload-work">Upload Work</Link></button>
+      <button><Link to="/upload-work">Upload Workk</Link></button>
     </div>
   );
 };
