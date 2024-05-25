@@ -37,7 +37,7 @@ const Login = ({ onLoginSuccess }) => {
       onLoginSuccess(role); // Pass the role to the onLoginSuccess callback
     } catch (error) {
       if (error.response && error.response.status === 401) {
-        setError('Invalid OTP');
+        setError('Invalid OT');
       } else {
         setError('An error occurred. Please try again.');
       }

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 const VetHome = () => {
   return (
     <div>
-      <h2>Vet Home</h2>
+      <h2>Vet Homee</h2>
       <button><Link to="/profile">My Profile</Link></button>
       <button><Link to="/reservations">My Reservations</Link></button>
       <button><Link to="/upload-work">Upload Work</Link></button>
