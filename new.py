@@ -120,41 +120,55 @@ class Application(tk.Tk):
         tk.Label(self, text="Ordinary User Profile", font=("Helvetica", 16)).pack(pady=20)
         tk.Label(self, text="Welcome, Ordinary User!").pack(pady=10)
         
-        tk.Button(self, text="My Profile", command=self.show_user_profile).pack(pady=10)
+        tk.Button(self, text="Add Pet", command=self.show_add_pet_window).pack(pady=10)
+        tk.Button(self, text="My Pets", command=self.show_user_profile).pack(pady=10)
+        tk.Button(self, text="Back", command=self.show_login_register_window).pack(pady=10)
 
     def show_user_profile(self):
         self.clear_window()
-        tk.Label(self, text="My Profile", font=("Helvetica", 16)).pack(pady=20)
+        tk.Label(self, text="My Pets", font=("Helvetica", 16)).pack(pady=20)
 
-        # Show My Pets section
-        tk.Label(self, text="My Pets", font=("Helvetica", 14)).pack(pady=10)
-        self.pet_name_entry = tk.Entry(self)
-        self.pet_name_entry.pack()
-        tk.Button(self, text="Add Pet", command=self.add_pet).pack(pady=5)
-        tk.Button(self, text="Back", command=self.show_login_register_window).pack(pady=10)
         # List of pets
         self.pet_listbox = tk.Listbox(self)
         self.pet_listbox.pack(pady=10)
         self.populate_pet_list()  # Populate list with user's pets
 
+        tk.Button(self, text="Back", command=self.show_ordinary_user_profile).pack(pady=10)
+
         
+    def show_add_pet_window(self):
+        self.clear_window()
+        tk.Label(self, text="Add Pet", font=("Helvetica", 16)).pack(pady=20)
+
+        tk.Label(self, text="Pet Name").pack()
+        self.pet_name_entry = tk.Entry(self)
+        self.pet_name_entry.pack()
+
+        tk.Button(self, text="Add Pet", command=self.add_pet).pack(pady=10)
+        tk.Button(self, text="Back", command=self.show_ordinary_user_profile).pack(pady=10)
 
     def add_pet(self):
         pet_name = self.pet_name_entry.get()
         if pet_name:
-            self.cursor.execute("INSERT INTO pets (user_id, pet_name) VALUES (?, ?)", (self.logged_in_user_id, pet_name))
-            self.conn.commit()
-            self.populate_pet_list()
-        tk.Button(self, text="Back", command=self.show_login_register_window).pack(pady=10)
+            try:
+                self.cursor.execute("INSERT INTO pets (user_id, pet_name) VALUES (?, ?)", (self.logged_in_user_id, pet_name))
+                self.conn.commit()
+                messagebox.showinfo("Add Pet", "Pet added successfully.")
+            except sqlite3.Error as e:
+                messagebox.showerror("Add Pet Error", str(e))
+        else:
+            messagebox.showerror("Add Pet Error", "Please enter a pet name.")
 
     def populate_pet_list(self):
         self.pet_listbox.delete(0, tk.END)
-        self.cursor.execute("SELECT pet_name FROM pets WHERE user_id=?", (self.logged_in_user_id,))
-        pets = self.cursor.fetchall()
-        for pet in pets:
-            self.pet_listbox.insert(tk.END, pet[0])
-        tk.Button(self, text="Back", command=self.show_login_register_window).pack(pady=10)
-            
+        try:
+            self.cursor.execute("SELECT pet_name FROM pets WHERE user_id=?", (self.logged_in_user_id,))
+            pets = self.cursor.fetchall()
+            for pet in pets:
+                self.pet_listbox.insert(tk.END, pet[0])
+        except sqlite3.Error as e:
+            messagebox.showerror("Fetch Pets Error", str(e))
+    
     def clear_window(self):
         for widget in self.winfo_children():
             widget.destroy()
