@@ -15,12 +15,10 @@ class Application(tk.Tk):
         self.show_login_register_window()
 
     def create_database(self):
-        self.conn = sqlite3.connect("users.db")
+        self.conn = sqlite3.connect("/mnt/data/users.db")  # Use the uploaded database file
         self.cursor = self.conn.cursor()
         
-        # Drop the existing users table if it exists to ensure schema update
-        self.cursor.execute("DROP TABLE IF EXISTS users")
-        
+        # Remove the DROP TABLE IF EXISTS users statement
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -319,6 +317,7 @@ class Application(tk.Tk):
                 messagebox.showerror("Add Pet Error", str(e))
         else:
             messagebox.showerror("Add Pet Error", "Please enter a pet name.")
+        tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
 
     def show_book_appointment_window(self):
         self.clear_window()
@@ -388,6 +387,8 @@ class Application(tk.Tk):
             self.show_ordinary_user_profile()
         except sqlite3.Error as e:
             messagebox.showerror("Book Appointment Error", str(e))
+        
+        tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
 
     def populate_pet_list(self):
         self.pet_listbox.delete(0, tk.END)
