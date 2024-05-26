@@ -286,7 +286,7 @@ class Application(tk.Tk):
 
     def show_user_profile(self):
         self.clear_window()
-        tk.Label(self, text="My Pets", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
+        tk.Label(self, text="My Petss", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
 
         # List of pets
         self.pet_listbox = tk.Listbox(self)
