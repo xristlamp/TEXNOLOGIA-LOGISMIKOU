@@ -94,7 +94,7 @@ class Application(tk.Tk):
         self.reg_password_entry = tk.Entry(self, show='*')
         self.reg_password_entry.pack()
 
-        tk.Label(self, text="Email").pack()
+        tk.Label(self, text="Emaiil").pack()
         self.reg_email_entry = tk.Entry(self)
         self.reg_email_entry.pack()
 
