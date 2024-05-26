@@ -386,19 +386,21 @@ class Application(tk.Tk):
         return [vet[0] for vet in vets]
 
     def get_service_providers(self):
-        self.cursor.execute("SELECT username FROM users WHERE user_type IN ('Veterinarian', 'Pet Sitter', 'Trainer')")
+        self.cursor.execute("SELECT username, user_type FROM users WHERE user_type IN ('Veterinarian', 'Pet Sitter', 'Trainer')")
         providers = self.cursor.fetchall()
-        return [provider[0] for provider in providers]
+        return [f"{provider[0]} ({provider[1]})" for provider in providers]
 
     def book_appointment(self):
         pet_name = self.pet_var.get()
-        provider_name = self.provider_var.get()
+        provider_info = self.provider_var.get()
         appointment_date = self.appointment_date_entry.get()
         appointment_time = self.appointment_time_entry.get()
         description = self.appointment_description_entry.get()
 
         self.cursor.execute("SELECT id FROM pets WHERE pet_name=? AND user_id=?", (pet_name, self.logged_in_user_id))
         pet_id = self.cursor.fetchone()[0]
+        
+        provider_name = provider_info.split(' (')[0]  # Extract the provider's username
         self.cursor.execute("SELECT id FROM users WHERE username=?", (provider_name,))
         provider_id = self.cursor.fetchone()[0]
 
@@ -412,15 +414,16 @@ class Application(tk.Tk):
             messagebox.showerror("Book Appointment Error", str(e))
 
         tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
-        def populate_pet_list(self):
-            self.pet_listbox.delete(0, tk.END)
-            try:
-                self.cursor.execute("SELECT pet_name FROM pets WHERE user_id=?", (self.logged_in_user_id,))
-                pets = self.cursor.fetchall()
-                for pet in pets:
-                    self.pet_listbox.insert(tk.END, pet[0])
-            except sqlite3.Error as e:
-                messagebox.showerror("Fetch Pets Error", str(e))
+
+    def populate_pet_list(self):
+        self.pet_listbox.delete(0, tk.END)
+        try:
+            self.cursor.execute("SELECT pet_name FROM pets WHERE user_id=?", (self.logged_in_user_id,))
+            pets = self.cursor.fetchall()
+            for pet in pets:
+                self.pet_listbox.insert(tk.END, pet[0])
+        except sqlite3.Error as e:
+            messagebox.showerror("Fetch Pets Error", str(e))
 
     def clear_window(self):
         for widget in self.winfo_children():
