@@ -286,7 +286,7 @@ class Application(tk.Tk):
 
     def show_user_profile(self):
         self.clear_window()
-        tk.Label(self, text="My Petss", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
+        tk.Label(self, text="My Pets", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
 
         # List of pets
         self.pet_listbox = tk.Listbox(self)
@@ -305,6 +305,24 @@ class Application(tk.Tk):
 
         tk.Button(self, text="Add Pet", command=self.add_pet, bg='green', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
+    def show_pet_sitter_profile(self):
+        self.clear_window()
+        tk.Label(self, text="Pet Sitter Profile", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
+        tk.Label(self, text="Welcome, Pet Sitter!").pack(pady=10)
+        
+        tk.Button(self, text="Manage Services", command=self.show_manage_services_window, bg='green', fg='white').pack(pady=10)
+        tk.Button(self, text="Appointments", command=self.show_appointments_window, bg='blue', fg='white').pack(pady=10)
+        tk.Button(self, text="Back", command=self.show_login_register_window, bg='red', fg='white').pack(pady=10)
+
+    def show_trainer_profile(self):
+        self.clear_window()
+        tk.Label(self, text="Trainer Profile", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
+        tk.Label(self, text="Welcome, Trainer!").pack(pady=10)
+        
+        tk.Button(self, text="Manage Services", command=self.show_manage_services_window, bg='green', fg='white').pack(pady=10)
+        tk.Button(self, text="Appointments", command=self.show_appointments_window, bg='blue', fg='white').pack(pady=10)
+        tk.Button(self, text="Back", command=self.show_login_register_window, bg='red', fg='white').pack(pady=10)
+
 
     def add_pet(self):
         pet_name = self.pet_name_entry.get()
@@ -330,12 +348,12 @@ class Application(tk.Tk):
             self.pet_var.set(pets[0])
             tk.OptionMenu(self, self.pet_var, *pets).pack()
 
-            tk.Label(self, text="Select Veterinarian").pack()
-            self.vet_var = tk.StringVar(self)
-            vets = self.get_veterinarians()
-            if vets:
-                self.vet_var.set(vets[0])
-                tk.OptionMenu(self, self.vet_var, *vets).pack()
+            tk.Label(self, text="Select Service Provider").pack()
+            self.provider_var = tk.StringVar(self)
+            providers = self.get_service_providers()
+            if providers:
+                self.provider_var.set(providers[0])
+                tk.OptionMenu(self, self.provider_var, *providers).pack()
 
                 tk.Label(self, text="Appointment Date (YYYY-MM-DD)").pack()
                 self.appointment_date_entry = tk.Entry(self)
@@ -351,7 +369,7 @@ class Application(tk.Tk):
 
                 tk.Button(self, text="Book Appointment", command=self.book_appointment, bg='green', fg='white').pack(pady=10)
             else:
-                tk.Label(self, text="No veterinarians available.").pack()
+                tk.Label(self, text="No service providers available.").pack()
         else:
             tk.Label(self, text="No pets available.").pack()
 
@@ -367,38 +385,42 @@ class Application(tk.Tk):
         vets = self.cursor.fetchall()
         return [vet[0] for vet in vets]
 
+    def get_service_providers(self):
+        self.cursor.execute("SELECT username FROM users WHERE user_type IN ('Veterinarian', 'Pet Sitter', 'Trainer')")
+        providers = self.cursor.fetchall()
+        return [provider[0] for provider in providers]
+
     def book_appointment(self):
         pet_name = self.pet_var.get()
-        vet_name = self.vet_var.get()
+        provider_name = self.provider_var.get()
         appointment_date = self.appointment_date_entry.get()
         appointment_time = self.appointment_time_entry.get()
         description = self.appointment_description_entry.get()
 
         self.cursor.execute("SELECT id FROM pets WHERE pet_name=? AND user_id=?", (pet_name, self.logged_in_user_id))
         pet_id = self.cursor.fetchone()[0]
-        self.cursor.execute("SELECT id FROM users WHERE username=?", (vet_name,))
-        vet_id = self.cursor.fetchone()[0]
+        self.cursor.execute("SELECT id FROM users WHERE username=?", (provider_name,))
+        provider_id = self.cursor.fetchone()[0]
 
         try:
             self.cursor.execute("INSERT INTO appointments (pet_id, vet_id, appointment_date, appointment_time, description) VALUES (?, ?, ?, ?, ?)",
-                                (pet_id, vet_id, appointment_date, appointment_time, description))
+                                (pet_id, provider_id, appointment_date, appointment_time, description))
             self.conn.commit()
             messagebox.showinfo("Book Appointment", "Appointment booked successfully.")
             self.show_ordinary_user_profile()
         except sqlite3.Error as e:
             messagebox.showerror("Book Appointment Error", str(e))
-        
-        tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
 
-    def populate_pet_list(self):
-        self.pet_listbox.delete(0, tk.END)
-        try:
-            self.cursor.execute("SELECT pet_name FROM pets WHERE user_id=?", (self.logged_in_user_id,))
-            pets = self.cursor.fetchall()
-            for pet in pets:
-                self.pet_listbox.insert(tk.END, pet[0])
-        except sqlite3.Error as e:
-            messagebox.showerror("Fetch Pets Error", str(e))
+        tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
+        def populate_pet_list(self):
+            self.pet_listbox.delete(0, tk.END)
+            try:
+                self.cursor.execute("SELECT pet_name FROM pets WHERE user_id=?", (self.logged_in_user_id,))
+                pets = self.cursor.fetchall()
+                for pet in pets:
+                    self.pet_listbox.insert(tk.END, pet[0])
+            except sqlite3.Error as e:
+                messagebox.showerror("Fetch Pets Error", str(e))
 
     def clear_window(self):
         for widget in self.winfo_children():
