@@ -1,3 +1,4 @@
+import os
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 import sqlite3
@@ -15,10 +16,10 @@ class Application(tk.Tk):
         self.show_login_register_window()
 
     def create_database(self):
-        self.conn = sqlite3.connect("/mnt/data/users.db")  # Use the uploaded database file
+        db_path = "users.db"  # Adjusted to a local path
+        self.conn = sqlite3.connect(db_path)  # Use the adjusted database file path
         self.cursor = self.conn.cursor()
         
-        # Remove the DROP TABLE IF EXISTS users statement
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,7 +95,7 @@ class Application(tk.Tk):
         self.reg_password_entry = tk.Entry(self, show='*')
         self.reg_password_entry.pack()
 
-        tk.Label(self, text="Emaiil").pack()
+        tk.Label(self, text="Email").pack()
         self.reg_email_entry = tk.Entry(self)
         self.reg_email_entry.pack()
 
@@ -305,6 +306,7 @@ class Application(tk.Tk):
 
         tk.Button(self, text="Add Pet", command=self.add_pet, bg='green', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
+
     def show_pet_sitter_profile(self):
         self.clear_window()
         tk.Label(self, text="Pet Sitter Profile", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
@@ -322,7 +324,6 @@ class Application(tk.Tk):
         tk.Button(self, text="Manage Services", command=self.show_manage_services_window, bg='green', fg='white').pack(pady=10)
         tk.Button(self, text="Appointments", command=self.show_appointments_window, bg='blue', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_login_register_window, bg='red', fg='white').pack(pady=10)
-
 
     def add_pet(self):
         pet_name = self.pet_name_entry.get()
@@ -412,15 +413,16 @@ class Application(tk.Tk):
             messagebox.showerror("Book Appointment Error", str(e))
 
         tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
-        def populate_pet_list(self):
-            self.pet_listbox.delete(0, tk.END)
-            try:
-                self.cursor.execute("SELECT pet_name FROM pets WHERE user_id=?", (self.logged_in_user_id,))
-                pets = self.cursor.fetchall()
-                for pet in pets:
-                    self.pet_listbox.insert(tk.END, pet[0])
-            except sqlite3.Error as e:
-                messagebox.showerror("Fetch Pets Error", str(e))
+
+    def populate_pet_list(self):
+        self.pet_listbox.delete(0, tk.END)
+        try:
+            self.cursor.execute("SELECT pet_name FROM pets WHERE user_id=?", (self.logged_in_user_id,))
+            pets = self.cursor.fetchall()
+            for pet in pets:
+                self.pet_listbox.insert(tk.END, pet[0])
+        except sqlite3.Error as e:
+            messagebox.showerror("Fetch Pets Error", str(e))
 
     def clear_window(self):
         for widget in self.winfo_children():
