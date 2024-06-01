@@ -26,7 +26,8 @@ class Application(tk.Tk):
                 username TEXT NOT NULL UNIQUE,
                 password TEXT NOT NULL,
                 user_type TEXT NOT NULL,
-                email TEXT NOT NULL
+                email TEXT NOT NULL,
+                location TEXT  -- Add location field
             )
         """)
         self.cursor.execute("""
@@ -34,6 +35,7 @@ class Application(tk.Tk):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 pet_name TEXT NOT NULL,
+                pet_type TEXT NOT NULL,  -- Add pet_type field
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         """)
@@ -99,6 +101,10 @@ class Application(tk.Tk):
         self.reg_email_entry = tk.Entry(self)
         self.reg_email_entry.pack()
 
+        tk.Label(self, text="Location").pack()  # Add location entry
+        self.reg_location_entry = tk.Entry(self)
+        self.reg_location_entry.pack()
+
         tk.Label(self, text="Select User Type").pack()
         self.user_type = tk.StringVar()
         user_types = ["Ordinary User", "Veterinarian", "Pet Sitter", "Trainer"]
@@ -116,6 +122,7 @@ class Application(tk.Tk):
         user = self.cursor.fetchone()
         if user:
             self.logged_in_user_id = user[0]  # Store the user's ID
+            self.logged_in_user_location = user[5]  # Store the user's location
             user_type = user[3]
             if user_type == "Ordinary User":
                 self.show_ordinary_user_profile()
@@ -132,11 +139,15 @@ class Application(tk.Tk):
         username = self.reg_username_entry.get()
         password = self.reg_password_entry.get()
         email = self.reg_email_entry.get()
+        location = self.reg_location_entry.get()  # Get location
         user_type = self.user_type.get()  # Get selected user type
+        if not username or not password or not email or not location or not user_type:
+            messagebox.showerror("Registration Error", "All fields are required.")
+            return
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
         try:
-            self.cursor.execute("INSERT INTO users (username, password, user_type, email) VALUES (?, ?, ?, ?)",
-                                (username, hashed_password, user_type, email))
+            self.cursor.execute("INSERT INTO users (username, password, user_type, email, location) VALUES (?, ?, ?, ?, ?)",
+                                (username, hashed_password, user_type, email, location))
             self.conn.commit()
             messagebox.showinfo("Registration Successful", "User registered successfully.")
             if user_type == "Ordinary User":
@@ -158,7 +169,56 @@ class Application(tk.Tk):
         tk.Button(self, text="Add Pet", command=self.show_add_pet_window, bg='green', fg='white').pack(pady=10)
         tk.Button(self, text="My Pets", command=self.show_user_profile, bg='blue', fg='white').pack(pady=10)
         tk.Button(self, text="Book Appointment", command=self.show_book_appointment_window, bg='purple', fg='white').pack(pady=10)
+        tk.Button(self, text="Find Trainers Near Me", command=self.show_trainer_search_window, bg='orange', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_login_register_window, bg='red', fg='white').pack(pady=10)
+
+    def show_trainer_search_window(self):
+        self.clear_window()
+        tk.Label(self, text="Find Trainers Near Me", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
+
+        tk.Label(self, text="Select Pet Type").pack()
+        self.pet_type_var = tk.StringVar(self)
+        pet_types = self.get_user_pet_types()
+        if pet_types:
+            self.pet_type_var.set(pet_types[0])
+            tk.OptionMenu(self, self.pet_type_var, *pet_types).pack()
+
+            tk.Button(self, text="Search Trainers", command=self.search_trainers_near_me, bg='green', fg='white').pack(pady=10)
+        else:
+            tk.Label(self, text="No pets available.").pack()
+
+        tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
+
+    def get_user_pet_types(self):
+        self.cursor.execute("SELECT DISTINCT pet_type FROM pets WHERE user_id=?", (self.logged_in_user_id,))
+        pet_types = self.cursor.fetchall()
+        return [pet[0] for pet in pet_types]
+
+    def search_trainers_near_me(self):
+        pet_type = self.pet_type_var.get()
+        location = self.logged_in_user_location  # Use user's location
+
+        self.cursor.execute("""
+            SELECT username, location, rating FROM users 
+            WHERE user_type='Trainer' AND location=? AND username IN (
+                SELECT trainer_name FROM trainer_specialties WHERE pet_type=?
+            )
+        """, (location, pet_type))
+        
+        trainers = self.cursor.fetchall()
+        self.show_trainer_results(trainers)
+
+    def show_trainer_results(self, trainers):
+        self.clear_window()
+        tk.Label(self, text="Available Trainers", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
+
+        if trainers:
+            for trainer in trainers:
+                tk.Label(self, text=f"Name: {trainer[0]}, Rating: {trainer[2]}, Location: {trainer[1]}").pack(pady=5)
+        else:
+            tk.Label(self, text="No trainers available for the selected pet type and location.").pack(pady=20)
+
+        tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
 
     def show_veterinarian_profile(self):
         self.clear_window()
@@ -304,6 +364,10 @@ class Application(tk.Tk):
         self.pet_name_entry = tk.Entry(self)
         self.pet_name_entry.pack()
 
+        tk.Label(self, text="Pet Type").pack()  # Add pet type entry
+        self.pet_type_entry = tk.Entry(self)
+        self.pet_type_entry.pack()
+
         tk.Button(self, text="Add Pet", command=self.add_pet, bg='green', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
 
@@ -327,15 +391,16 @@ class Application(tk.Tk):
 
     def add_pet(self):
         pet_name = self.pet_name_entry.get()
-        if pet_name:
+        pet_type = self.pet_type_entry.get()  # Get pet type
+        if pet_name and pet_type:
             try:
-                self.cursor.execute("INSERT INTO pets (user_id, pet_name) VALUES (?, ?)", (self.logged_in_user_id, pet_name))
+                self.cursor.execute("INSERT INTO pets (user_id, pet_name, pet_type) VALUES (?, ?, ?)", (self.logged_in_user_id, pet_name, pet_type))
                 self.conn.commit()
                 messagebox.showinfo("Add Pet", "Pet added successfully.")
             except sqlite3.Error as e:
                 messagebox.showerror("Add Pet Error", str(e))
         else:
-            messagebox.showerror("Add Pet Error", "Please enter a pet name.")
+            messagebox.showerror("Add Pet Error", "Please enter a pet name and type.")
         tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
 
     def show_book_appointment_window(self):
@@ -387,21 +452,19 @@ class Application(tk.Tk):
         return [vet[0] for vet in vets]
 
     def get_service_providers(self):
-        self.cursor.execute("SELECT username, user_type FROM users WHERE user_type IN ('Veterinarian', 'Pet Sitter', 'Trainer')")
+        self.cursor.execute("SELECT username FROM users WHERE user_type IN ('Veterinarian', 'Pet Sitter', 'Trainer')")
         providers = self.cursor.fetchall()
-        return [f"{provider[0]} ({provider[1]})" for provider in providers]
+        return [provider[0] for provider in providers]
 
     def book_appointment(self):
         pet_name = self.pet_var.get()
-        provider_info = self.provider_var.get()
+        provider_name = self.provider_var.get()
         appointment_date = self.appointment_date_entry.get()
         appointment_time = self.appointment_time_entry.get()
         description = self.appointment_description_entry.get()
 
         self.cursor.execute("SELECT id FROM pets WHERE pet_name=? AND user_id=?", (pet_name, self.logged_in_user_id))
         pet_id = self.cursor.fetchone()[0]
-        
-        provider_name = provider_info.split(' (')[0]  # Extract the provider's username
         self.cursor.execute("SELECT id FROM users WHERE username=?", (provider_name,))
         provider_id = self.cursor.fetchone()[0]
 
