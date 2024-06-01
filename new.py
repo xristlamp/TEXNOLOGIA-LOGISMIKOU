@@ -493,6 +493,7 @@ class Application(tk.Tk):
         for widget in self.winfo_children():
             widget.destroy()
 
+
 if __name__ == "__main__":
     app = Application()
     app.mainloop()
