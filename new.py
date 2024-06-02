@@ -6,6 +6,15 @@ import hashlib
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import folium
+import webbrowser
+import json
+import http.server
+import socketserver
+import threading
+
+
+
 
 class Application(tk.Tk):
     def __init__(self):
@@ -14,6 +23,8 @@ class Application(tk.Tk):
         self.geometry("600x400")
         self.create_database()
         self.show_login_register_window()
+        self.server = None
+        self.start_server()
 
     def create_database(self):
         db_path = "users.db"  # Adjusted to a local path
@@ -139,27 +150,40 @@ class Application(tk.Tk):
         username = self.reg_username_entry.get()
         password = self.reg_password_entry.get()
         email = self.reg_email_entry.get()
-        location = self.reg_location_entry.get()  # Get location
-        user_type = self.user_type.get()  # Get selected user type
-        if not username or not password or not email or not location or not user_type:
+        user_type = self.user_type.get()
+
+        if not username or not password or not email or not user_type:
             messagebox.showerror("Registration Error", "All fields are required.")
             return
-        hashed_password = hashlib.sha256(password.encode()).hexdigest()
-        try:
-            self.cursor.execute("INSERT INTO users (username, password, user_type, email, location) VALUES (?, ?, ?, ?, ?)",
-                                (username, hashed_password, user_type, email, location))
-            self.conn.commit()
-            messagebox.showinfo("Registration Successful", "User registered successfully.")
-            if user_type == "Ordinary User":
-                self.show_ordinary_user_profile()
-            elif user_type == "Veterinarian":
-                self.show_veterinarian_profile()
-            elif user_type == "Pet Sitter":
-                self.show_pet_sitter_profile()
-            elif user_type == "Trainer":
-                self.show_trainer_profile()
-        except sqlite3.IntegrityError:
-            messagebox.showerror("Registration Error", "Username already exists.")
+
+        self.open_map()
+
+        # Wait for coordinates to be set
+        while not hasattr(self.server, 'coords'):
+            self.update()
+
+        location = f"{self.server.coords['lat']}, {self.server.coords['lng']}"
+
+        if location:
+            hashed_password = hashlib.sha256(password.encode()).hexdigest()
+            try:
+                self.cursor.execute("INSERT INTO users (username, password, user_type, email, location) VALUES (?, ?, ?, ?, ?)",
+                                    (username, hashed_password, user_type, email, location))
+                self.conn.commit()
+                messagebox.showinfo("Registration Successful", "User registered successfully.")
+                if user_type == "Ordinary User":
+                    self.show_ordinary_user_profile()
+                elif user_type == "Veterinarian":
+                    self.show_veterinarian_profile()
+                elif user_type == "Pet Sitter":
+                    self.show_pet_sitter_profile()
+                elif user_type == "Trainer":
+                    self.show_trainer_profile()
+            except sqlite3.IntegrityError:
+                messagebox.showerror("Registration Error", "Username already exists.")
+        else:
+            messagebox.showerror("Registration Error", "Location not entered.")
+        self.stop_server()
 
     def show_ordinary_user_profile(self):
         self.clear_window()
@@ -492,6 +516,93 @@ class Application(tk.Tk):
     def clear_window(self):
         for widget in self.winfo_children():
             widget.destroy()
+
+    def open_map(self):
+        # Create a map centered at a default location
+        m = folium.Map(location=[45.5236, -122.6750], zoom_start=13)
+        # Add a ClickForMarker feature to the map
+        m.add_child(folium.ClickForMarker(popup="Selected Location"))
+
+        # JavaScript function to capture click event and send coordinates
+        custom_js = """
+        function getCoords(lat, lng) {
+            const coords = {lat: lat, lng: lng};
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "http://localhost:8000/coords", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.send(JSON.stringify(coords));
+        }
+        """
+
+        # Add the custom JavaScript to the map
+        folium.Marker(
+            location=[45.5236, -122.6750],
+            popup='Click the map to choose your location',
+            draggable=True
+        ).add_to(m)
+        m.get_root().script.add_child(folium.Element(custom_js))
+
+        # Save the map as an HTML file
+        map_path = 'map.html'
+        m.save(map_path)
+
+        # Start a simple HTTP server to serve the map and handle the coordinates
+        self.start_server()
+
+        # Open the map in a web browser
+        webbrowser.open('file://' + os.path.realpath(map_path))
+
+    def start_server(self):
+        # Set up a simple HTTP server to receive coordinates
+       class RequestHandler(http.server.SimpleHTTPRequestHandler):
+            def do_POST(self):
+                if self.path == "/coords":
+                    content_length = int(self.headers['Content-Length'])
+                    post_data = self.rfile.read(content_length)
+                    coords = json.loads(post_data)
+
+                    # Save the coordinates to the database
+                    self.save_coords_to_db(coords)
+
+                    self.send_response(200)
+                    self.end_headers()
+
+            def save_coords_to_db(self, coords):
+                conn = sqlite3.connect('users.db')
+                cursor = conn.cursor()
+
+                # Ensure to create a table if not exists, or update the user table if adding a column
+                cursor.execute('''CREATE TABLE IF NOT EXISTS locations (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                user_id INTEGER,
+                                latitude REAL,
+                                longitude REAL,
+                                FOREIGN KEY(user_id) REFERENCES users(id))''')
+
+                # Assuming the user_id is part of coords, adjust if necessary
+                cursor.execute('INSERT INTO locations (user_id, latitude, longitude) VALUES (?, ?, ?)',
+                            (coords['user_id'], coords['latitude'], coords['longitude']))
+
+                conn.commit()
+                conn.close()
+
+    def stop_server(self):
+        if hasattr(self, 'server'):
+            self.server.shutdown()
+            self.server.server_close()
+
+    import requests
+
+    def send_location_to_server(user_id, latitude, longitude):
+        url = "http://localhost:8001/coords"
+        data = {
+            "user_id": user_id,
+            "latitude": latitude,
+            "longitude": longitude
+        }
+        response = requests.post(url, json=data)
+        return response.status_code == 200
+
 
 
 if __name__ == "__main__":
