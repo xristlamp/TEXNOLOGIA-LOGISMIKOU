@@ -21,8 +21,6 @@ class Application(tk.Tk):
 
     def create_database(self):
         db_file_path = "/mnt/data/users.db"  # Define the new database file path
-        if os.path.exists(db_file_path):
-            os.remove(db_file_path)  # Remove the existing database file if it exists
         self.conn = sqlite3.connect(db_file_path)
         self.cursor = self.conn.cursor()
         
