@@ -17,7 +17,7 @@ class Application(tk.Tk):
         self.create_database()
         self.show_login_register_window()
         self.logged_in_user_location = None  # Initialize the location
-
+        self.custom_questions = {}
 
     def create_database(self):
         db_file_path = os.path.join(os.getcwd(), "users.db")  # Database file in the current working directory
@@ -74,12 +74,16 @@ class Application(tk.Tk):
 
         self.conn.commit()
 
+    def open_ai_chat(self):
+        self.show_ai_chat_help()
+
     def show_login_register_window(self):
         self.clear_window()
         tk.Label(self, text="Welcome to Pet Service App", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
         
         tk.Button(self, text="Login", command=self.show_login_window, bg='green', fg='white').pack(pady=10)
         tk.Button(self, text="Register", command=self.show_register_window, bg='blue', fg='white').pack(pady=10)
+        tk.Button(self, text="Live Chat", command=self.open_ai_chat, bg='grey', fg='white').pack(pady=10)
 
     def show_login_window(self):
         self.clear_window()
@@ -95,6 +99,7 @@ class Application(tk.Tk):
 
         tk.Button(self, text="Login", command=self.login, bg='green', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_login_register_window, bg='red', fg='white').pack(pady=10)
+        tk.Button(self, text="Live Chat", command=self.show_ai_chat_help, bg='grey', fg='white').pack(pady=10)
 
     def show_register_window(self):
         self.clear_window()
@@ -127,6 +132,7 @@ class Application(tk.Tk):
 
         tk.Button(self, text="Register", command=self.register, bg='blue', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_login_register_window, bg='red', fg='white').pack(pady=10)
+        tk.Button(self, text="Live Chat", command=self.show_ai_chat_help, bg='grey', fg='white').pack(pady=10)
 
     def login(self):
         username = self.username_entry.get()
@@ -181,6 +187,7 @@ class Application(tk.Tk):
         tk.Button(self, text="My Pets", command=self.show_user_profile, bg='blue', fg='white').pack(pady=10)
         tk.Button(self, text="Book Appointment", command=self.show_book_appointment_window, bg='purple', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_login_register_window, bg='red', fg='white').pack(pady=10)
+        tk.Button(self, text="Live Chat", command=self.show_ai_chat_help, bg='grey', fg='white').pack(pady=10)
 
     def show_veterinarian_profile(self):
         self.clear_window()
@@ -190,6 +197,7 @@ class Application(tk.Tk):
         tk.Button(self, text="Manage Services", command=self.show_manage_services_window, bg='green', fg='white').pack(pady=10)
         tk.Button(self, text="Appointments", command=self.show_appointments_window, bg='blue', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_login_register_window, bg='red', fg='white').pack(pady=10)
+        tk.Button(self, text="Live Chat", command=self.show_ai_chat_help, bg='grey', fg='white').pack(pady=10)
 
     def show_manage_services_window(self):
         self.clear_window()
@@ -205,6 +213,7 @@ class Application(tk.Tk):
 
         tk.Button(self, text="Add Service", command=self.add_service, bg='green', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_veterinarian_profile, bg='red', fg='white').pack(pady=10)
+        tk.Button(self, text="Live Chat", command=self.show_ai_chat_help, bg='grey', fg='white').pack(pady=10)
 
     def add_service(self):
         service_name = self.service_name_entry.get()
@@ -229,6 +238,7 @@ class Application(tk.Tk):
         tk.Button(self, text="Add Note", command=self.add_note_to_appointment, bg='green', fg='white').pack(pady=10)
         tk.Button(self, text="Send Email", command=self.send_email_to_patient, bg='blue', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_veterinarian_profile, bg='red', fg='white').pack(pady=10)
+        tk.Button(self, text="Live Chat", command=self.show_ai_chat_help, bg='grey', fg='white').pack(pady=10)
 
     def populate_appointment_list(self):
         self.appointment_listbox.delete(0, tk.END)
@@ -409,7 +419,7 @@ class Application(tk.Tk):
         return [vet[0] for vet in vets]
 
     def get_service_providers(self):
-        self.cursor.execute("SELECT username, user_type FROM users WHERE user_type IN ('Veterinarian', 'Pet Sitter', 'Trainer') AND location=?", (self.logged_in_user_location,))
+        self.cursor.execute("SELECT username, user_type FROM users WHERE user_type IN ('Veterinarian', 'Pet Sitter', 'Trainer')")
         providers = self.cursor.fetchall()
         return [f"{provider[0]} ({provider[1]})" for provider in providers]
 
@@ -451,6 +461,71 @@ class Application(tk.Tk):
     def clear_window(self):
         for widget in self.winfo_children():
             widget.destroy()
+
+    def show_ai_chat_help(self):
+        chat_window = tk.Toplevel(self)
+        chat_window.title("AI Chat Help")
+        chat_window.geometry("400x400")
+
+        chat_display = tk.Text(chat_window, height=15, width=50)
+        chat_display.pack(pady=10)
+
+        chat_entry = tk.Entry(chat_window, width=40)
+        chat_entry.pack(pady=10)
+
+        predefined_questions = {
+            "How can I book an appointment?": "You can book an appointment by going to the 'Book Appointment' section.",
+            "Where are you located?": "We are located in Athens, Greece.",
+            "What services do you offer?": "We offer a variety of services including veterinary care, pet sitting, and training.",
+            "How to contact support?": "You can contact support by calling our hotline at 123-456-7890 or emailing support@example.com.",
+            "What are your working hours?": "Our working hours are Monday to Friday, 9:00 AM to 5:00 PM.",
+            "How can I cancel an appointment?": "To cancel an appointment, please contact us via phone or email at least 24 hours in advance.",
+            "Do you offer emergency services?": "Yes, we offer emergency services. Please call our emergency hotline for assistance.",
+            "How can I add a pet?": "You can add a pet by navigating to the 'Add Pet' section and entering the required details.",
+            "How to find nearby veterinarians?": "You can find nearby veterinarians by using the 'Find Vets Near Me' feature.",
+            "How to search for trainers?": "Use the 'Find Trainers Near Me' feature to search for trainers based on your location."
+        }
+
+        keywords = {
+            "appointment": "How can I book an appointment?",
+            "location": "Where are you located?",
+            "services": "What services do you offer?",
+            "support": "How to contact support?",
+            "hours": "What are your working hours?",
+            "cancel": "How can I cancel an appointment?",
+            "emergency": "Do you offer emergency services?",
+            "add pet": "How can I add a pet?",
+            "veterinarians": "How to find nearby veterinarians?",
+            "trainers": "How to search for trainers?"
+        }
+
+        def handle_predefined_question(question):
+            chat_display.insert(tk.END, f"You: {question}\n")
+            response = predefined_questions.get(question, "I'm sorry, I don't understand that question.")
+            chat_display.insert(tk.END, f"AI: {response}\n")
+
+        for question in predefined_questions.keys():
+            tk.Button(chat_window, text=question, command=lambda q=question: handle_predefined_question(q)).pack(pady=5)
+
+        def send_message():
+            message = chat_entry.get()
+            if message:
+                chat_display.insert(tk.END, f"You: {message}\n")
+                response = None
+                if message in predefined_questions:
+                    response = predefined_questions[message]
+                else:
+                    for keyword, question in keywords.items():
+                        if keyword in message.lower():
+                            response = predefined_questions[question]
+                            break
+                if not response:
+                    response = "Sorry, I don't understand that question."
+                chat_display.insert(tk.END, f"AI: {response}\n")
+                chat_entry.delete(0, tk.END)
+
+        send_button = tk.Button(chat_window, text="Send", command=send_message)
+        send_button.pack(pady=10)
 
 if __name__ == "__main__":
     app = Application()
