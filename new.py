@@ -13,6 +13,8 @@ class Application(tk.Tk):
         self.geometry("600x400")
         self.create_database()
         self.show_login_register_window()
+        self.logged_in_user_location = None  # Initialize the location
+
 
     def create_database(self):
         self.conn = sqlite3.connect("/mnt/data/users.db")  # Use the uploaded database file
@@ -403,7 +405,7 @@ class Application(tk.Tk):
         return [vet[0] for vet in vets]
 
     def get_service_providers(self):
-        self.cursor.execute("SELECT username, user_type FROM users WHERE user_type IN ('Veterinarian', 'Pet Sitter', 'Trainer')")
+        self.cursor.execute("SELECT username, user_type FROM users WHERE user_type IN ('Veterinarian', 'Pet Sitter', 'Trainer') AND location=?", (self.logged_in_user_location,))
         providers = self.cursor.fetchall()
         return [f"{provider[0]} ({provider[1]})" for provider in providers]
 
