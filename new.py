@@ -201,7 +201,7 @@ class Application(tk.Tk):
     def show_ordinary_user_profile(self):
         self.clear_window()
         tk.Label(self, text="Ordinary User Profile", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
-        tk.Label(self, text="Welcome, Ordinary User!").pack(pady=10)
+        tk.Label(self, text="Welcome, Ordinary User!!").pack(pady=10)
         
         tk.Button(self, text="Add Pet", command=self.show_add_pet_window, bg='green', fg='white').pack(pady=10)
         tk.Button(self, text="My Pets", command=self.show_user_profile, bg='blue', fg='white').pack(pady=10)
