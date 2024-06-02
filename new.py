@@ -5,6 +5,9 @@ import hashlib
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import os
+
+
 
 class Application(tk.Tk):
     def __init__(self):
@@ -17,7 +20,10 @@ class Application(tk.Tk):
 
 
     def create_database(self):
-        self.conn = sqlite3.connect("/mnt/data/users.db")  # Use the uploaded database file
+        db_file_path = "/mnt/data/users.db"  # Define the new database file path
+        if os.path.exists(db_file_path):
+            os.remove(db_file_path)  # Remove the existing database file if it exists
+        self.conn = sqlite3.connect(db_file_path)
         self.cursor = self.conn.cursor()
         
         # Remove the DROP TABLE IF EXISTS users statement
