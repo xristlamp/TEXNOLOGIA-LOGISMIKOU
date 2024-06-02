@@ -12,6 +12,7 @@ import json
 import http.server
 import socketserver
 import threading
+import requests
 
 
 
@@ -146,6 +147,8 @@ class Application(tk.Tk):
         else:
             messagebox.showerror("Login Error", "Invalid username or password.")
 
+  
+
     def register(self):
         username = self.reg_username_entry.get()
         password = self.reg_password_entry.get()
@@ -156,14 +159,21 @@ class Application(tk.Tk):
             messagebox.showerror("Registration Error", "All fields are required.")
             return
 
-        self.open_map()
+        # Start the server in a separate thread to handle the map and coordinates
+        server_thread = threading.Thread(target=self.open_map)
+        server_thread.start()
 
-        # Wait for coordinates to be set
-        while not hasattr(self.server, 'coords'):
-            self.update()
+        # Check for coordinates periodically
+        self.after(100, self.check_coords, username, password, email, user_type)
 
-        location = f"{self.server.coords['lat']}, {self.server.coords['lng']}"
+    def check_coords(self, username, password, email, user_type):
+        if hasattr(self.server, 'coords'):
+            location = f"{self.server.coords['lat']}, {self.server.coords['lng']}"
+            self.save_user_to_db(username, password, email, user_type, location)
+        else:
+            self.after(100, self.check_coords, username, password, email, user_type)
 
+    def save_user_to_db(self, username, password, email, user_type, location):
         if location:
             hashed_password = hashlib.sha256(password.encode()).hexdigest()
             try:
@@ -171,6 +181,7 @@ class Application(tk.Tk):
                                     (username, hashed_password, user_type, email, location))
                 self.conn.commit()
                 messagebox.showinfo("Registration Successful", "User registered successfully.")
+                self.stop_server()
                 if user_type == "Ordinary User":
                     self.show_ordinary_user_profile()
                 elif user_type == "Veterinarian":
@@ -181,9 +192,11 @@ class Application(tk.Tk):
                     self.show_trainer_profile()
             except sqlite3.IntegrityError:
                 messagebox.showerror("Registration Error", "Username already exists.")
+                self.stop_server()
         else:
             messagebox.showerror("Registration Error", "Location not entered.")
-        self.stop_server()
+            self.stop_server()
+
 
     def show_ordinary_user_profile(self):
         self.clear_window()
@@ -551,6 +564,7 @@ class Application(tk.Tk):
 
         # Open the map in a web browser
         webbrowser.open('file://' + os.path.realpath(map_path))
+        pass
 
     def start_server(self):
         # Set up a simple HTTP server to receive coordinates
@@ -591,7 +605,7 @@ class Application(tk.Tk):
             self.server.shutdown()
             self.server.server_close()
 
-    import requests
+    
 
     def send_location_to_server(user_id, latitude, longitude):
         url = "http://localhost:8001/coords"
