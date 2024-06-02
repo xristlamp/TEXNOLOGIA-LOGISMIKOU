@@ -1,4 +1,3 @@
-import os
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 import sqlite3
@@ -6,16 +5,6 @@ import hashlib
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import folium
-import webbrowser
-import json
-import http.server
-import socketserver
-import threading
-import requests
-
-
-
 
 class Application(tk.Tk):
     def __init__(self):
@@ -24,14 +13,12 @@ class Application(tk.Tk):
         self.geometry("600x400")
         self.create_database()
         self.show_login_register_window()
-        self.server = None
-        self.start_server()
 
     def create_database(self):
-        db_path = "users.db"  # Adjusted to a local path
-        self.conn = sqlite3.connect(db_path)  # Use the adjusted database file path
+        self.conn = sqlite3.connect("/mnt/data/users.db")  # Use the uploaded database file
         self.cursor = self.conn.cursor()
         
+        # Remove the DROP TABLE IF EXISTS users statement
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,7 +26,7 @@ class Application(tk.Tk):
                 password TEXT NOT NULL,
                 user_type TEXT NOT NULL,
                 email TEXT NOT NULL,
-                location TEXT  -- Add location field
+                location TEXT NOT NULL
             )
         """)
         self.cursor.execute("""
@@ -47,7 +34,6 @@ class Application(tk.Tk):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 pet_name TEXT NOT NULL,
-                pet_type TEXT NOT NULL,  -- Add pet_type field
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         """)
@@ -73,6 +59,13 @@ class Application(tk.Tk):
                 FOREIGN KEY (vet_id) REFERENCES users(id)
             )
         """)
+           # Check if the 'location' column exists, and if not, add it
+        self.cursor.execute("PRAGMA table_info(users)")
+        columns = [info[1] for info in self.cursor.fetchall()]
+        if 'location' not in columns:
+            self.cursor.execute("ALTER TABLE users ADD COLUMN location TEXT")
+            self.conn.commit()
+
         self.conn.commit()
 
     def show_login_register_window(self):
@@ -109,19 +102,22 @@ class Application(tk.Tk):
         self.reg_password_entry = tk.Entry(self, show='*')
         self.reg_password_entry.pack()
 
-        tk.Label(self, text="Email").pack()
+        tk.Label(self, text="Emaiil").pack()
         self.reg_email_entry = tk.Entry(self)
         self.reg_email_entry.pack()
-
-        tk.Label(self, text="Location").pack()  # Add location entry
-        self.reg_location_entry = tk.Entry(self)
-        self.reg_location_entry.pack()
 
         tk.Label(self, text="Select User Type").pack()
         self.user_type = tk.StringVar()
         user_types = ["Ordinary User", "Veterinarian", "Pet Sitter", "Trainer"]
         for user_type in user_types:
             tk.Radiobutton(self, text=user_type, variable=self.user_type, value=user_type).pack()
+
+        # Add Location Selection
+        tk.Label(self, text="Location").pack()
+        self.location_var = tk.StringVar()
+        self.location_var.set("Athens")  # default value
+        cities = ["Patras", "Athens", "Thessaloniki", "Heraklion", "Larissa", "Volos", "Ioannina", "Chania", "Rhodes", "Kalamata"]
+        tk.OptionMenu(self, self.location_var, *cities).pack()
 
         tk.Button(self, text="Register", command=self.register, bg='blue', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_login_register_window, bg='red', fg='white').pack(pady=10)
@@ -134,7 +130,6 @@ class Application(tk.Tk):
         user = self.cursor.fetchone()
         if user:
             self.logged_in_user_id = user[0]  # Store the user's ID
-            self.logged_in_user_location = user[5]  # Store the user's location
             user_type = user[3]
             if user_type == "Ordinary User":
                 self.show_ordinary_user_profile()
@@ -147,115 +142,39 @@ class Application(tk.Tk):
         else:
             messagebox.showerror("Login Error", "Invalid username or password.")
 
-  
-
     def register(self):
         username = self.reg_username_entry.get()
         password = self.reg_password_entry.get()
         email = self.reg_email_entry.get()
-        user_type = self.user_type.get()
+        user_type = self.user_type.get()  # Get selected user type
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        location = self.location_var.get()  # Get the selected location
 
-        if not username or not password or not email or not user_type:
-            messagebox.showerror("Registration Error", "All fields are required.")
-            return
-
-        # Start the server in a separate thread to handle the map and coordinates
-        server_thread = threading.Thread(target=self.open_map)
-        server_thread.start()
-
-        # Check for coordinates periodically
-        self.after(100, self.check_coords, username, password, email, user_type)
-
-    def check_coords(self, username, password, email, user_type):
-        if hasattr(self.server, 'coords'):
-            location = f"{self.server.coords['lat']}, {self.server.coords['lng']}"
-            self.save_user_to_db(username, password, email, user_type, location)
-        else:
-            self.after(100, self.check_coords, username, password, email, user_type)
-
-    def save_user_to_db(self, username, password, email, user_type, location):
-        if location:
-            hashed_password = hashlib.sha256(password.encode()).hexdigest()
-            try:
-                self.cursor.execute("INSERT INTO users (username, password, user_type, email, location) VALUES (?, ?, ?, ?, ?)",
-                                    (username, hashed_password, user_type, email, location))
-                self.conn.commit()
-                messagebox.showinfo("Registration Successful", "User registered successfully.")
-                self.stop_server()
-                if user_type == "Ordinary User":
-                    self.show_ordinary_user_profile()
-                elif user_type == "Veterinarian":
-                    self.show_veterinarian_profile()
-                elif user_type == "Pet Sitter":
-                    self.show_pet_sitter_profile()
-                elif user_type == "Trainer":
-                    self.show_trainer_profile()
-            except sqlite3.IntegrityError:
-                messagebox.showerror("Registration Error", "Username already exists.")
-                self.stop_server()
-        else:
-            messagebox.showerror("Registration Error", "Location not entered.")
-            self.stop_server()
-
+        try:
+            self.cursor.execute("INSERT INTO users (username, password, user_type, email, location) VALUES (?, ?, ?, ?, ?)",
+                                (username, hashed_password, user_type, email,location))
+            self.conn.commit()
+            messagebox.showinfo("Registration Successful", "User registered successfully.")
+            if user_type == "Ordinary User":
+                self.show_ordinary_user_profile()
+            elif user_type == "Veterinarian":
+                self.show_veterinarian_profile()
+            elif user_type == "Pet Sitter":
+                self.show_pet_sitter_profile()
+            elif user_type == "Trainer":
+                self.show_trainer_profile()
+        except sqlite3.IntegrityError:
+            messagebox.showerror("Registration Error", "Username already exists.")
 
     def show_ordinary_user_profile(self):
         self.clear_window()
         tk.Label(self, text="Ordinary User Profile", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
-        tk.Label(self, text="Welcome, Ordinary User!!").pack(pady=10)
+        tk.Label(self, text="Welcome, Ordinary User!").pack(pady=10)
         
         tk.Button(self, text="Add Pet", command=self.show_add_pet_window, bg='green', fg='white').pack(pady=10)
         tk.Button(self, text="My Pets", command=self.show_user_profile, bg='blue', fg='white').pack(pady=10)
         tk.Button(self, text="Book Appointment", command=self.show_book_appointment_window, bg='purple', fg='white').pack(pady=10)
-        tk.Button(self, text="Find Trainers Near Me", command=self.show_trainer_search_window, bg='orange', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_login_register_window, bg='red', fg='white').pack(pady=10)
-
-    def show_trainer_search_window(self):
-        self.clear_window()
-        tk.Label(self, text="Find Trainers Near Me", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
-
-        tk.Label(self, text="Select Pet Type").pack()
-        self.pet_type_var = tk.StringVar(self)
-        pet_types = self.get_user_pet_types()
-        if pet_types:
-            self.pet_type_var.set(pet_types[0])
-            tk.OptionMenu(self, self.pet_type_var, *pet_types).pack()
-
-            tk.Button(self, text="Search Trainers", command=self.search_trainers_near_me, bg='green', fg='white').pack(pady=10)
-        else:
-            tk.Label(self, text="No pets available.").pack()
-
-        tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
-
-    def get_user_pet_types(self):
-        self.cursor.execute("SELECT DISTINCT pet_type FROM pets WHERE user_id=?", (self.logged_in_user_id,))
-        pet_types = self.cursor.fetchall()
-        return [pet[0] for pet in pet_types]
-
-    def search_trainers_near_me(self):
-        pet_type = self.pet_type_var.get()
-        location = self.logged_in_user_location  # Use user's location
-
-        self.cursor.execute("""
-            SELECT username, location, rating FROM users 
-            WHERE user_type='Trainer' AND location=? AND username IN (
-                SELECT trainer_name FROM trainer_specialties WHERE pet_type=?
-            )
-        """, (location, pet_type))
-        
-        trainers = self.cursor.fetchall()
-        self.show_trainer_results(trainers)
-
-    def show_trainer_results(self, trainers):
-        self.clear_window()
-        tk.Label(self, text="Available Trainers", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
-
-        if trainers:
-            for trainer in trainers:
-                tk.Label(self, text=f"Name: {trainer[0]}, Rating: {trainer[2]}, Location: {trainer[1]}").pack(pady=5)
-        else:
-            tk.Label(self, text="No trainers available for the selected pet type and location.").pack(pady=20)
-
-        tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
 
     def show_veterinarian_profile(self):
         self.clear_window()
@@ -401,13 +320,8 @@ class Application(tk.Tk):
         self.pet_name_entry = tk.Entry(self)
         self.pet_name_entry.pack()
 
-        tk.Label(self, text="Pet Type").pack()  # Add pet type entry
-        self.pet_type_entry = tk.Entry(self)
-        self.pet_type_entry.pack()
-
         tk.Button(self, text="Add Pet", command=self.add_pet, bg='green', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
-
     def show_pet_sitter_profile(self):
         self.clear_window()
         tk.Label(self, text="Pet Sitter Profile", font=("Helvetica", 20), bg='lightblue').pack(pady=20)
@@ -426,18 +340,18 @@ class Application(tk.Tk):
         tk.Button(self, text="Appointments", command=self.show_appointments_window, bg='blue', fg='white').pack(pady=10)
         tk.Button(self, text="Back", command=self.show_login_register_window, bg='red', fg='white').pack(pady=10)
 
+
     def add_pet(self):
         pet_name = self.pet_name_entry.get()
-        pet_type = self.pet_type_entry.get()  # Get pet type
-        if pet_name and pet_type:
+        if pet_name:
             try:
-                self.cursor.execute("INSERT INTO pets (user_id, pet_name, pet_type) VALUES (?, ?, ?)", (self.logged_in_user_id, pet_name, pet_type))
+                self.cursor.execute("INSERT INTO pets (user_id, pet_name) VALUES (?, ?)", (self.logged_in_user_id, pet_name))
                 self.conn.commit()
                 messagebox.showinfo("Add Pet", "Pet added successfully.")
             except sqlite3.Error as e:
                 messagebox.showerror("Add Pet Error", str(e))
         else:
-            messagebox.showerror("Add Pet Error", "Please enter a pet name and type.")
+            messagebox.showerror("Add Pet Error", "Please enter a pet name.")
         tk.Button(self, text="Back", command=self.show_ordinary_user_profile, bg='red', fg='white').pack(pady=10)
 
     def show_book_appointment_window(self):
@@ -489,19 +403,21 @@ class Application(tk.Tk):
         return [vet[0] for vet in vets]
 
     def get_service_providers(self):
-        self.cursor.execute("SELECT username FROM users WHERE user_type IN ('Veterinarian', 'Pet Sitter', 'Trainer')")
+        self.cursor.execute("SELECT username, user_type FROM users WHERE user_type IN ('Veterinarian', 'Pet Sitter', 'Trainer')")
         providers = self.cursor.fetchall()
-        return [provider[0] for provider in providers]
+        return [f"{provider[0]} ({provider[1]})" for provider in providers]
 
     def book_appointment(self):
         pet_name = self.pet_var.get()
-        provider_name = self.provider_var.get()
+        provider_info = self.provider_var.get()
         appointment_date = self.appointment_date_entry.get()
         appointment_time = self.appointment_time_entry.get()
         description = self.appointment_description_entry.get()
 
         self.cursor.execute("SELECT id FROM pets WHERE pet_name=? AND user_id=?", (pet_name, self.logged_in_user_id))
         pet_id = self.cursor.fetchone()[0]
+        
+        provider_name = provider_info.split(' (')[0]  # Extract the provider's username
         self.cursor.execute("SELECT id FROM users WHERE username=?", (provider_name,))
         provider_id = self.cursor.fetchone()[0]
 
@@ -529,95 +445,6 @@ class Application(tk.Tk):
     def clear_window(self):
         for widget in self.winfo_children():
             widget.destroy()
-
-    def open_map(self):
-        # Create a map centered at a default location
-        m = folium.Map(location=[45.5236, -122.6750], zoom_start=13)
-        # Add a ClickForMarker feature to the map
-        m.add_child(folium.ClickForMarker(popup="Selected Location"))
-
-        # JavaScript function to capture click event and send coordinates
-        custom_js = """
-        function getCoords(lat, lng) {
-            const coords = {lat: lat, lng: lng};
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", "http://localhost:8000/coords", true);
-            xhr.setRequestHeader("Content-Type", "application/json");
-            xhr.send(JSON.stringify(coords));
-        }
-        """
-
-        # Add the custom JavaScript to the map
-        folium.Marker(
-            location=[45.5236, -122.6750],
-            popup='Click the map to choose your location',
-            draggable=True
-        ).add_to(m)
-        m.get_root().script.add_child(folium.Element(custom_js))
-
-        # Save the map as an HTML file
-        map_path = 'map.html'
-        m.save(map_path)
-
-        # Start a simple HTTP server to serve the map and handle the coordinates
-        self.start_server()
-
-        # Open the map in a web browser
-        webbrowser.open('file://' + os.path.realpath(map_path))
-        pass
-
-    def start_server(self):
-        # Set up a simple HTTP server to receive coordinates
-       class RequestHandler(http.server.SimpleHTTPRequestHandler):
-            def do_POST(self):
-                if self.path == "/coords":
-                    content_length = int(self.headers['Content-Length'])
-                    post_data = self.rfile.read(content_length)
-                    coords = json.loads(post_data)
-
-                    # Save the coordinates to the database
-                    self.save_coords_to_db(coords)
-
-                    self.send_response(200)
-                    self.end_headers()
-
-            def save_coords_to_db(self, coords):
-                conn = sqlite3.connect('users.db')
-                cursor = conn.cursor()
-
-                # Ensure to create a table if not exists, or update the user table if adding a column
-                cursor.execute('''CREATE TABLE IF NOT EXISTS locations (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                user_id INTEGER,
-                                latitude REAL,
-                                longitude REAL,
-                                FOREIGN KEY(user_id) REFERENCES users(id))''')
-
-                # Assuming the user_id is part of coords, adjust if necessary
-                cursor.execute('INSERT INTO locations (user_id, latitude, longitude) VALUES (?, ?, ?)',
-                            (coords['user_id'], coords['latitude'], coords['longitude']))
-
-                conn.commit()
-                conn.close()
-
-    def stop_server(self):
-        if hasattr(self, 'server'):
-            self.server.shutdown()
-            self.server.server_close()
-
-    
-
-    def send_location_to_server(user_id, latitude, longitude):
-        url = "http://localhost:8001/coords"
-        data = {
-            "user_id": user_id,
-            "latitude": latitude,
-            "longitude": longitude
-        }
-        response = requests.post(url, json=data)
-        return response.status_code == 200
-
-
 
 if __name__ == "__main__":
     app = Application()
