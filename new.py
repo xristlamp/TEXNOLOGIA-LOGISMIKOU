@@ -20,7 +20,7 @@ class Application(tk.Tk):
 
 
     def create_database(self):
-        db_file_path = "/mnt/data/users.db"  # Define the new database file path
+        db_file_path = os.path.join(os.getcwd(), "users.db")  # Database file in the current working directory
         self.conn = sqlite3.connect(db_file_path)
         self.cursor = self.conn.cursor()
         
